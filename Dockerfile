@@ -7,18 +7,19 @@ RUN corepack enable
 
 WORKDIR /app
 
-# --- 修改点 1: 安装 openssh-server 并配置 ---
+# --- 修改 1: 安装 SSH 并配置端口 ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-server \
     sudo \
     && mkdir /var/run/sshd \
-    # 设置 root 密码（生产环境建议改为 SSH 密钥登录）
-    && echo 'root:123456789' | chpasswd \
-    # 允许 root 远程登录
+    # 修改 SSH 端口为 18790
+    && sed -i 's/#Port 22/Port 18790/' /etc/ssh/sshd_config \
+    # 允许 root 密码登录 (请务必在部署后修改密码)
+    && echo 'root:root_password' | chpasswd \
     && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 这里的逻辑保留你原有的自定义包安装
+# 原有的依赖安装逻辑
 ARG OPENCLAW_DOCKER_APT_PACKAGES=""
 RUN if [ -n "$OPENCLAW_DOCKER_APT_PACKAGES" ]; then \
       apt-get update && \
@@ -42,13 +43,13 @@ RUN pnpm ui:build
 ENV NODE_ENV=production
 RUN chown -R node:node /app
 
-# --- 修改点 2: 准备启动脚本 ---
-# 我们不再在 Dockerfile 里直接切换到 USER node，而是通过脚本切换
+# --- 修改 2: 暴露 18790 端口 ---
+EXPOSE 18790 18789
+
+# 引入启动脚本并赋予权限
 COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# 暴露 SSH (22) 和 OpenClaw (18789) 端口
-EXPOSE 22 18789
-
-# --- 修改点 3: 使用启动脚本作为入口 ---
+# 注意：这里去掉了 USER node，因为启动 SSH 需要 root 权限
+# 我们在 entrypoint.sh 内部再切换用户运行 OpenClaw
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
