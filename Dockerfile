@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && mkdir /var/run/sshd \
     # 修改 SSH 端口为 18790
     && sed -i 's/#Port 22/Port 18790/' /etc/ssh/sshd_config \
-    # 允许 root 密码登录 (请务必在部署后修改密码)
+    # 允许 root 密码登录 (请务必在部署后修改密码!)
     && echo 'root:root_password' | chpasswd \
     && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
